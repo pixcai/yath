@@ -1,0 +1,38 @@
+{
+  "name": "yath",
+  "version": "1.0.0",
+  "description": "Yet Another Tester for HTML",
+  "main": "dist/yath.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "gulp",
+    "clean": "gulp clean"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pixcai/yath.git"
+  },
+  "keywords": [
+    "test",
+    "tester",
+    "browser",
+    "cross"
+  ],
+  "author": "pixcai",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pixcai/yath/issues"
+  },
+  "homepage": "https://github.com/pixcai/yath#readme",
+  "devDependencies": {
+    "del": "^2.2.2",
+    "gulp": "^3.9.1",
+    "gulp-rename": "^1.2.2",
+    "webpack-stream": "^3.2.0"
+  },
+  "dependencies": {
+    "gulp-uglify": "^2.0.0"
+  }
+}
