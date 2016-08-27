@@ -47,73 +47,71 @@ module.exports =
 
 	var util = __webpack_require__(1);
 	var context = __webpack_require__(2);
-	var methods = __webpack_require__(6);
+	var methods = __webpack_require__(3);
 
 	function test(name, options, callback) {
 	  if (util.isString(name)) {
-	    methods.comment(name);
+	    methods.print('h2', name, { textAlign: 'center' });
 	    if (util.isObject(options)) {
-	      context.options = options;
+	      context.options = Object.assign(context.options, options);
 	      if (util.isFunction(callback)) {
-	        callback(methods);
+	        setTimeout(function() {
+	          callback(methods);
+	        });
 	      }
 	    } else if (util.isFunction(options)) {
-	      options(methods);
+	      setTimeout(function() {
+	        options(methods);
+	      });
 	    }
 	  } else if (util.isObject(name)) {
-	    context.options = name;
+	    context.options = Object.assign(context.options, name);
 	    if (util.isFunction(options)) {
-	      options(methods);
+	      setTimeout(function() {
+	        options(methods);
+	      });
 	    }
 	  } else if (util.isFunction(name)) {
-	    name(methods);
+	    setTimeout(function() {
+	      name(methods);
+	    });
 	  }
 	}
 
-	(function() {
-	  window.yath = function(element) {
-	    context.element = document.body;
-	    if (util.isHTMLElement(element)) {
-	      context.element = element;
-	    }
-	    return test;
-	  };
-	})();
+	module.exports = function (element) {
+	  methods.exports = document.body;
+	  if (util.isHTMLElement(element)) {
+	    methods.exports = element;
+	  }
+	  methods.test = test;
+
+	  return test;
+	};
 
 
 /***/ },
 /* 1 */
 /***/ function(module, exports) {
 
-	module.exports = [
+	var util = [
 	  'Undefined',
 	  'String',
 	  'Number',
 	  'Boolean',
 	  'Function',
+	  'Array',
 	  'Null',
 	  'Object',
+	  'RegExp',
 	  'HTMLElement'
 	].reduce(function(util, type) {
 	  var isType = function(value) {
-	    return typeof value === type.toLowerCase();
+	    return RegExp(type).test(Object.prototype.toString.call(value));
 	  };
 
 	  if (type === 'HTMLElement') {
 	    isType = function(value) {
-	      var isHTMLElement = /HTML/.test(Object.prototype.toString.call(value));
-
-	      return util.isObject(value) && isHTMLElement;
-	    };
-	  }
-	  if (type === 'Null') {
-	    isType = function(value) {
-	      return value === null;
-	    };
-	  }
-	  if (type === 'Object') {
-	    isType = function(value) {
-	      return !util.isNull(value) && typeof value === 'object';
+	      return /HTML\S*Element/.test(Object.prototype.toString.call(value));
 	    };
 	  }
 	  util['is' + type] = isType;
@@ -121,149 +119,165 @@ module.exports =
 	  return util;
 	}, {});
 
+	function __compare(fn, actual, expected, callback) {
+	  var isEqual = true;
+
+	  if (util.isArray(actual) && util.isArray(expected)) {
+	    var actualLength = actual.length;
+	    var expectedLength = expected.length;
+
+	    for (var i = 0; i < expectedLength; i++) {
+	      if (i < actualLength) {
+	        if (!__compare(fn, actual[i], expected[i])) {
+	          isEqual = false;
+	        }
+	        if (util.isFunction(callback)) {
+	          callback(actual[i], expected[i]);
+	        }
+	      }
+	    }
+	    isEqual = isEqual && (actualLength === expectedLength);
+	  } else if (util.isObject(actual) && util.isObject(expected)) {
+	    for (var key in expected) {
+	      if (expected.hasOwnProperty(key) && actual.hasOwnProperty(key)) {
+	        if (!__compare(fn, actual[i], expected[i])) {
+	          isEqual = false;
+	        }
+	      } else {
+	        isEqual = false;
+	      }
+	      if (util.isFunction(callback)) {
+	        callback(actual[key], expected[key]);
+	      }
+	    }
+	    isEqual = isEqual && (Object.keys(actual).length === Object.keys(expected).length);
+	  } else {
+	    isEqual = fn(actual, expected);
+	    if (util.isFunction(callback)) {
+	      callback(actual, expected);
+	    }
+	  }
+
+	  return isEqual;
+	}
+
+	util.equal = function(actual, expected, callback) {
+	  return __compare(function(v1, v2) {
+	    return v1 == v2;
+	  }, actual, expected, callback);
+	};
+
+	util.strictEqual = function(actual, expected, callback) {
+	  return __compare(function(v1, v2) {
+	    return v1 === v2;
+	  }, actual, expected, callback);
+	};
+
+	module.exports = util;
+
+
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var util = __webpack_require__(1);
-	var __assert = __webpack_require__(3);
-	var __deepEqual = __webpack_require__(4);
-	var __deepStrictEqual = __webpack_require__(5);
-
-	var __failCount = 0;
-	var __passCount = 0;
 
 	var __context = {
-	  failCount: function(value) {
-	    if (util.isNumber(value)) {
-	      __failCount = value;
-	    }
-	    return __failCount;
-	  },
-	  passCount: function(value) {
-	    if (util.isNumber(value)) {
-	      __passCount = value;
-	    }
-	    return __passCount;
-	  },
-	  totalCount: function() {
-	    return __failCount + __passCount;
-	  }
+	  failCount: 0,
+	  passCount: 0,
+	  callOrder: 0
+	};
+
+	var commonStyle = {
+	  margin: 0,
+	  lineHeight: 2,
+	  borderBottom: '1px solid'
 	};
 
 	__context.options = {
 	  comment: {
 	    tag: 'h3',
+	    style: Object.assign({
+	      padding: '0 .5em',
+	      color: 'black',
+	      background: '#ccc'
+	    }, commonStyle)
+	  },
+	  passed: {
+	    tag: 'p',
+	    style: Object.assign({
+	      padding: '0 .5em 0 2em',
+	      color: 'green'
+	    }, commonStyle)
+	  },
+	  failed: {
+	    tag: 'p',
+	    style: Object.assign({
+	      padding: '0 .5em 0 2em',
+	      color: 'red'
+	    }, commonStyle)
+	  },
+	  actual: {
+	    tag: 'span',
 	    style: {
 	      color: 'black'
 	    }
 	  },
-	  pass: {
-	    tag: 'p',
+	  expected: {
+	    tag: 'span',
 	    style: {
-	      margin: 0,
-	      color: 'green'
-	    }
-	  },
-	  fail: {
-	    tag: 'p',
-	    style: {
-	      margin: 0,
-	      color: 'red'
+	      color: 'black'
 	    }
 	  }
 	};
 
 	__context.methods = {
 	  assert: function(value) {
-	    return __assert.call(__context, value);
+	    if (!!value) {
+	      __context.passCount++;
+	    } else {
+	      __context.failCount++;
+	    }
+	    __context.callOrder++;
+
+	    return !!value;
 	  },
-	  equal: function (actual, expected) {
+	  equal: function(actual, expected) {
 	    return this.assert(actual == expected);
 	  },
-	  deepEqual: function(actual, expected, level) {
-	    return __deepEqual.call(__context, actual, expected, level);
+	  deepEqual: function(actual, expected) {
+	    return this.assert(util.equal(actual, expected));
 	  },
-	  strictEqual: function (actual, expected) {
+	  strictEqual: function(actual, expected) {
 	    return this.assert(actual === expected);
 	  },
-	  deepStrictEqual: function(actual, expected, level) {
-	    return __deepStrictEqual.call(__context, actual, expected, level);
+	  deepStrictEqual: function(actual, expected) {
+	    return this.assert(util.strictEqual(actual, expected));
+	  },
+	  throws: function(fn, expected) {
+	    var isThrow = false;
+
+	    try {
+	      if (util.isFunction(fn)) {
+	        fn();
+	      }
+	    } catch (e) {
+	      if (util.isFunction(expected)) {
+	        isThrow = expected(e);
+	      } else if (util.isRegExp(expected)) {
+	        isThrow = expected.test(e.toString());
+	      }
+	    }
+
+	    return this.assert(isThrow);
 	  }
 	};
 
 	module.exports = __context;
 
+
 /***/ },
 /* 3 */
-/***/ function(module, exports) {
-
-	module.exports = function (value) {
-	  if (!!value) {
-	    this.passCount(this.passCount() + 1);
-	  } else {
-	    this.failCount(this.failCount() + 1);
-	  }
-
-	  return !!value;
-	};
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var util = __webpack_require__(1);
-
-	module.exports = function (actual, expected, level) {
-	  var isEqual = true;
-
-	  if (util.isObject(actual) && util.isObject(expected)) {
-	  	if (!this.methods.strictEqual(actual, expected)) {
-		    for (var key in expected) {
-		      if (expected.hasOwnProperty(key) && actual.hasOwnProperty(key)) {
-		        if(!this.methods.deepEqual(actual[key], expected[key], level + 1)) {
-		        	isEqual = false;
-		        }
-		      }
-		      if (!isEqual) break;
-		    }
-	  	}
-	  	return (level === 0) ? this.methods.assert(true) : true;
-	  }
-	  isEqual = (actual == expected);
-
-	  return (level === 0) ? this.methods.assert(isEqual) : isEqual;
-	};
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var util = __webpack_require__(1);
-
-	module.exports= function (actual, expected, level) {
-	  var isEqual = true;
-
-	  if (util.isObject(actual) && util.isObject(expected)) {
-	  	if (!this.methods.strictEqual(actual, expected)) {
-		    for (var key in expected) {
-		      if (expected.hasOwnProperty(key) && actual.hasOwnProperty(key)) {
-		        if(!this.methods.deepStrictEqual(actual[key], expected[key], level + 1)) {
-		        	isEqual = false;
-		        }
-		      }
-		      if (!isEqual) break;
-		    }
-	  	}
-	  	return (level === 0) ? this.methods.assert(true) : true;
-	  }
-	  isEqual = (actual === expected);
-
-	  return (level === 0) ? this.methods.assert(isEqual) : isEqual;
-	};
-
-/***/ },
-/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var util = __webpack_require__(1);
@@ -281,81 +295,250 @@ module.exports =
 	    }
 	  }
 	  element.appendChild(el);
-
-	  return el;
 	}
 
-	function __wrapper(value, initmsg, message) {
-	  var msg = util.isString(message) ? message : initmsg;
+	function __wrapper(value, actual, expected, passmsg, failmsg) {
+	  var msg = '';
 
 	  if (value) {
-	    this.pass(msg);
+	    msg = passmsg || 'OK';
+	    this.pass('#' + context.callOrder + ' (status: passed): ' + msg);
 	  } else {
-	    this.fail(msg);
+	    if (failmsg) {
+	      msg = failmsg;
+	    } else {
+	      var expected = util.isRegExp(expected) ? expected.source : JSON.stringify(expected);
+	      var actual = util.isRegExp(actual) ? actual.source : JSON.stringify(actual);
+	      var expectedTag = context.options.expected.tag;
+	      var actualTag = context.options.actual.tag;
+
+	      function __style(style) {
+	        return Object.keys(style).reduce(function (str, key) {
+	          return str + key + ':' + style[key] + ';';
+	        }, '');
+	      }
+
+	      msg += 'expected: ';
+	      msg += '<' + expectedTag + ' style=' + __style(context.options.expected.style) +'>';
+	      msg += expected + '</' + expectedTag + '>, ';
+	      msg += 'actual: ';
+	      msg += '<' + actualTag + ' style=' + __style(context.options.actual.style) + '>';
+	      msg += actual + '</' + actualTag + '>';
+	    }
+	    this.fail('#' + context.callOrder + ' (status: failed): ' + msg);
 	  }
+
+	  return this;
 	}
 
-	module.exports = {
-	  assert: function(value, message) {
-	    __wrapper.call(
-	      this,
-	      context.methods.assert(value),
-	      'ok assert',
-	      message
-	    );
-	  },
-	  equal: function(actual, expected, message) {
-	    __wrapper.call(
-	      this,
-	      context.methods.equal(actual, expected),
-	      'ok equal',
-	      message
-	    );
-	  },
-	  deepEqual: function(actual, expected, message) {
-	    __wrapper.call(
-	      this,
-	      context.methods.deepEqual(actual, expected, 0),
-	      'ok deepEqual',
-	      message
-	    );
-	  },
-	  strictEqual: function(actual, expected, message) {
-	    __wrapper.call(
-	      this,
-	      context.methods.strictEqual(actual, expected),
-	      'ok strictEqual',
-	      message
-	    );
-	  },
-	  deepStrictEqual: function(actual, expected) {
-	    __wrapper.call(
-	      this,
-	      context.methods.deepStrictEqual(actual, expected, 0),
-	      'ok deepStrictEqual',
-	      message
-	    );
-	  },
+	var methods = {
 	  comment: function(message) {
-	    var tag = context.options.comment.tag;
-	    var style = context.options.comment.style;
+	    var div = document.createElement('div');
+	    var self = Object.create(this);
 
-	    return __log(context.element, tag, message, style);
+	    this.exports.appendChild(div);
+	    self.exports = div;
+	    __log(
+	      div,
+	      context.options.comment.tag,
+	      message,
+	      context.options.comment.style
+	    );
+
+	    return self;
 	  },
 	  pass: function(message) {
-	    var tag = context.options.pass.tag;
-	    var style = context.options.pass.style;
-
-	    return __log(context.element, tag, message, style);
+	    return this.print(
+	      context.options.passed.tag,
+	      message,
+	      context.options.passed.style
+	    );
 	  },
 	  fail: function(message) {
-	    var tag = context.options.fail.tag;
-	    var style = context.options.fail.style;
-
-	    return __log(context.element, tag, message, style);
+	    return this.print(
+	      context.options.failed.tag,
+	      message,
+	      context.options.failed.style
+	    );
+	  },
+	  print: function(tag, message, style) {
+	    __log(this.exports, tag, message, style);
+	    return this;
 	  }
 	};
 
+	methods.assert =
+	methods.isOk =
+	methods.true =
+	methods.ok =
+	methods.is = function(value, message) {
+	  return __wrapper.call(
+	    this,
+	    context.methods.assert(value),
+	    value,
+	    true,
+	    null,
+	    message
+	  );
+	};
+
+	methods.isNotOk =
+	methods.notOk =
+	methods.false = function(value, message) {
+	  return __wrapper.call(
+	    this, 
+	    context.methods.assert(!value), 
+	    value, 
+	    false, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isEquals =
+	methods.isEqual =
+	methods.equals =
+	methods.equal = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    context.methods.equal(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.doesNotEquals =
+	methods.doesNotEqual =
+	methods.isNotEquals =
+	methods.isNotEqual =
+	methods.notEquals =
+	methods.notEqual = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    !context.methods.equal(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isEquivalent =
+	methods.deepEquals =
+	methods.deepEqual =
+	methods.same = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    context.methods.deepEqual(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isNotEquivalent =
+	methods.notEquivalent =
+	methods.isNotDeepEquals =
+	methods.notDeepEquals =
+	methods.isNotDeepEqual =
+	methods.notDeepEqual =
+	methods.notSame = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    !context.methods.deepEqual(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isStrictEquals =
+	methods.strictEquals =
+	methods.isStrictEqual =
+	methods.strictEqual = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    context.methods.strictEqual(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isNotStrictEquals =
+	methods.notStrictEquals =
+	methods.isNotStrictEqual =
+	methods.notStrictEqual = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    !context.methods.strictEqual(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isDeepEquivalent =
+	methods.deepEquivalent =
+	methods.isDeepStrictEquals =
+	methods.deepStrictEquals =
+	methods.isDeepStrictEqual =
+	methods.deepStrictEqual = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    context.methods.deepStrictEqual(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.isNotDeepEquivalent =
+	methods.notDeepEquivalent =
+	methods.isNotDeepStrictEquals =
+	methods.notDeepStrictEquals =
+	methods.isNotDeepStrictEqual =
+	methods.notDeepStrictEqual = function(actual, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    !context.methods.deepStrictEqual(actual, expected), 
+	    actual, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.throws = function(fn, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    context.methods.throws(fn, expected), 
+	    /Error/, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	methods.doesNotThrow = function(fn, expected, message) {
+	  return __wrapper.call(
+	    this, 
+	    !context.methods.throws(fn, expected), 
+	    /Error/, 
+	    expected, 
+	    null, 
+	    message
+	  );
+	};
+
+	module.exports = methods;
 
 /***/ }
 /******/ ]);

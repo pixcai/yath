@@ -1,11 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-	<title>test yath</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+  <title>test yath</title>
 </head>
+
 <body>
-	<script src="../dist/yath.min.js"></script>
+  <div id="root"></div>
+  <script src="../dist/yath.min.js"></script>
+  <script>
+  var test = yath(document.getElementById('root'));
+
+  test('test yath', function(t) {
+    var arr = [1, 'abcd', 1.1314, ['efgh', {
+      i: 2
+    }], {
+      j: 3
+    }];
+    var obj = {
+      a: 1,
+      b: {
+        c: 'defg',
+        h: ['i', 'j', 'k', 'l'],
+        m: {
+          n: 1.1314
+        }
+      }
+    };
+
+    t.fail('This is a fail message');
+    t.pass('This is a pass message');
+    t.print('p', 'This is a custom format message', {
+      color: 'purple',
+      textAlign: 'center'
+    });
+
+    t.comment('test assert')
+      .assert(true)
+      .assert(false);
+
+    t.comment('test equal')
+      .equal(1, 1)
+      .equal(1, 0)
+      .equal(1.1, 1.1)
+      .equal('a', 'a')
+      .equal('a', 'b', 'error: "a" != "b"')
+      .equal(false, false)
+      .equal(true, false);
+
+    t.comment('test deepEqual')
+      .deepEqual({
+        a: 1,
+        b: [2, 3]
+      }, {
+        a: 1,
+        b: [2, 3]
+      })
+      .deepEqual({
+        a: 1
+      }, obj);
+
+    t.comment('test deepStrictEqual')
+      .deepStrictEqual(['a', 1], arr)
+      .deepStrictEqual(arr, arr)
+      .deepStrictEqual({
+        a: 1
+      }, obj)
+      .deepStrictEqual({
+        a: 1,
+        b: {
+          c: 'defg',
+          h: ['i', 'j', 'k', 'l'],
+          m: {
+            n: 1.1314
+          }
+        }
+      }, obj);
+
+    t.comment('test throw')
+    	.throws(function () {
+    		throw new ReferenceError('throw something');
+    	}, /test/)
+    	.throws(function () {
+    		throw new ReferenceError('throw something');
+    	}, /something/);
+
+    t.comment('test doesNotThrow')
+    	.doesNotThrow(function () {
+    		throw new ReferenceError('throw something');
+    	}, /something/)
+    	.doesNotThrow(function () {
+    		throw new ReferenceError('throw something');
+    	}, /test/);
+  });
+  </script>
 </body>
+
 </html>

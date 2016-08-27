@@ -5,7 +5,7 @@ var uglify = require('gulp-uglify');
 var webpack = require('webpack-stream');
 
 gulp.task('build', function() {
-  gulp.src('./lib/yath.js')
+  gulp.src('./lib/browser_yath.js')
     .pipe(webpack({
       output: {
         filename: 'yath.js'
@@ -19,7 +19,7 @@ gulp.task('build', function() {
 });
 
 gulp.task('default', ['build'], function() {
-  gulp.src('./lib/yath.js')
+  gulp.src('./lib/nodejs_yath.js')
     .pipe(webpack({
       output: {
         filename: 'yath.js',
