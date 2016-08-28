@@ -50,40 +50,51 @@ module.exports =
 	var methods = __webpack_require__(3);
 
 	function test(name, options, callback) {
+	  var __methods = util.clone(methods);
+
+	  __methods.context = util.clone(context);
 	  if (util.isString(name)) {
-	    methods.print('h2', name, { textAlign: 'center' });
 	    if (util.isObject(options)) {
-	      context.options = Object.assign(context.options, options);
+	      __methods.context.options = util.assign(__methods.context.options, options);
 	      if (util.isFunction(callback)) {
 	        setTimeout(function() {
-	          callback(methods);
+	          callback(__methods);
 	        });
 	      }
 	    } else if (util.isFunction(options)) {
 	      setTimeout(function() {
-	        options(methods);
+	        options(__methods);
 	      });
 	    }
+	    __methods.print(
+	      __methods.context.options.name.tag,
+	      name,
+	      __methods.context.options.name.style
+	    );
 	  } else if (util.isObject(name)) {
-	    context.options = Object.assign(context.options, name);
+	    __methods.context.options = util.assign(__methods.context.options, name);
 	    if (util.isFunction(options)) {
 	      setTimeout(function() {
-	        options(methods);
+	        options(__methods);
 	      });
 	    }
 	  } else if (util.isFunction(name)) {
 	    setTimeout(function() {
-	      name(methods);
+	      name(__methods);
 	    });
 	  }
 	}
 
-	module.exports = function (element) {
+	module.exports = function(element) {
 	  methods.exports = document.body;
 	  if (util.isHTMLElement(element)) {
 	    methods.exports = element;
 	  }
-	  methods.test = test;
+	  methods.test = function(name, options, callback) {
+	    setTimeout(function() {
+	      test(name, options, callback);
+	    });
+	  };
 
 	  return test;
 	};
@@ -173,6 +184,46 @@ module.exports =
 	  }, actual, expected, callback);
 	};
 
+	util.clone = function(obj) {
+	  if (util.isArray(obj)) {
+	    var value = [];
+
+	    obj.forEach(function(val, i) {
+	      value[i] = util.clone(val);
+	    });
+
+	    return value;
+	  } else if (util.isObject(obj)) {
+	    var value = {};
+
+	    for (var key in obj) {
+	      if (obj.hasOwnProperty(key)) {
+	        value[key] = util.clone(obj[key]);
+	      }
+	    }
+
+	    return value;
+	  }
+
+	  return obj;
+	};
+
+	util.assign = function(obj, value) {
+	  if (util.isObject(obj) && util.isObject(value)) {
+	    for (var key in value) {
+	      if (value.hasOwnProperty(key)) {
+	        if (obj.hasOwnProperty(key)) {
+	          obj[key] = util.assign(value[key], obj[key]);
+	        } else {
+	          obj[key] = value[key];
+	        }
+	      }
+	    }
+	  }
+
+	  return obj;
+	};
+
 	module.exports = util;
 
 
@@ -182,37 +233,43 @@ module.exports =
 
 	var util = __webpack_require__(1);
 
-	var __context = {
-	  failCount: 0,
-	  passCount: 0,
+	var context = {
+	  failedCount: 0,
+	  passedCount: 0,
 	  callOrder: 0
 	};
 
 	var commonStyle = {
 	  margin: 0,
-	  lineHeight: 2,
-	  borderBottom: '1px solid'
+	  'line-height': 2,
+	  'border-bottom': '1px solid'
 	};
 
-	__context.options = {
+	context.options = {
+	  name: {
+	    tag: 'h2',
+	    style: {
+	      'text-align': 'center'
+	    }
+	  },
 	  comment: {
 	    tag: 'h3',
-	    style: Object.assign({
+	    style: util.assign({
 	      padding: '0 .5em',
 	      color: 'black',
-	      background: '#ccc'
+	      background: '#ddd'
 	    }, commonStyle)
 	  },
 	  passed: {
 	    tag: 'p',
-	    style: Object.assign({
+	    style: util.assign({
 	      padding: '0 .5em 0 2em',
 	      color: 'green'
 	    }, commonStyle)
 	  },
 	  failed: {
 	    tag: 'p',
-	    style: Object.assign({
+	    style: util.assign({
 	      padding: '0 .5em 0 2em',
 	      color: 'red'
 	    }, commonStyle)
@@ -231,49 +288,18 @@ module.exports =
 	  }
 	};
 
-	__context.methods = {
-	  assert: function(value) {
-	    if (!!value) {
-	      __context.passCount++;
-	    } else {
-	      __context.failCount++;
-	    }
-	    __context.callOrder++;
-
-	    return !!value;
-	  },
-	  equal: function(actual, expected) {
-	    return this.assert(actual == expected);
-	  },
-	  deepEqual: function(actual, expected) {
-	    return this.assert(util.equal(actual, expected));
-	  },
-	  strictEqual: function(actual, expected) {
-	    return this.assert(actual === expected);
-	  },
-	  deepStrictEqual: function(actual, expected) {
-	    return this.assert(util.strictEqual(actual, expected));
-	  },
-	  throws: function(fn, expected) {
-	    var isThrow = false;
-
-	    try {
-	      if (util.isFunction(fn)) {
-	        fn();
-	      }
-	    } catch (e) {
-	      if (util.isFunction(expected)) {
-	        isThrow = expected(e);
-	      } else if (util.isRegExp(expected)) {
-	        isThrow = expected.test(e.toString());
-	      }
-	    }
-
-	    return this.assert(isThrow);
+	context.assert = function(value) {
+	  if (!!value) {
+	    this.passedCount++;
+	  } else {
+	    this.failedCount++;
 	  }
+	  this.callOrder++;
+
+	  return !!value;
 	};
 
-	module.exports = __context;
+	module.exports = context;
 
 
 /***/ },
@@ -297,38 +323,39 @@ module.exports =
 	  element.appendChild(el);
 	}
 
-	function __wrapper(value, actual, expected, passmsg, failmsg) {
-	  var msg = '';
-
-	  if (value) {
-	    msg = passmsg || 'OK';
-	    this.pass('#' + context.callOrder + ' (status: passed): ' + msg);
+	function __assert(value, actual, expected, passmsg, failmsg) {
+	  if (context.assert.call(this.context, value)) {
+	    this.pass('#' + this.context.callOrder + ' (status: passed): ' + (passmsg || 'OK'));
 	  } else {
-	    if (failmsg) {
-	      msg = failmsg;
-	    } else {
+	    if (!failmsg) {
 	      var expected = util.isRegExp(expected) ? expected.source : JSON.stringify(expected);
 	      var actual = util.isRegExp(actual) ? actual.source : JSON.stringify(actual);
-	      var expectedTag = context.options.expected.tag;
-	      var actualTag = context.options.actual.tag;
+	      var expectedTag = this.context.options.expected.tag;
+	      var actualTag = this.context.options.actual.tag;
 
 	      function __style(style) {
-	        return Object.keys(style).reduce(function (str, key) {
+	        return Object.keys(style).reduce(function(str, key) {
 	          return str + key + ':' + style[key] + ';';
 	        }, '');
 	      }
 
-	      msg += 'expected: ';
-	      msg += '<' + expectedTag + ' style=' + __style(context.options.expected.style) +'>';
-	      msg += expected + '</' + expectedTag + '>, ';
-	      msg += 'actual: ';
-	      msg += '<' + actualTag + ' style=' + __style(context.options.actual.style) + '>';
-	      msg += actual + '</' + actualTag + '>';
+	      failmsg = 'expected: ';
+	      failmsg += '<' + expectedTag + ' style=' + __style(this.context.options.expected.style) + '>';
+	      failmsg += expected + '</' + expectedTag + '>, ';
+	      failmsg += 'actual: ';
+	      failmsg += '<' + actualTag + ' style=' + __style(this.context.options.actual.style) + '>';
+	      failmsg += actual + '</' + actualTag + '>';
 	    }
-	    this.fail('#' + context.callOrder + ' (status: failed): ' + msg);
+	    this.fail('#' + this.context.callOrder + ' (status: failed): ' + failmsg);
 	  }
+	}
 
-	  return this;
+	function __wrapper(context, value, actual, expected, passmsg, failmsg) {
+	  setTimeout(function () {
+	    __assert.call(context, value, actual, expected, passmsg, failmsg);
+	  });
+
+	  return context;
 	}
 
 	var methods = {
@@ -340,25 +367,25 @@ module.exports =
 	    self.exports = div;
 	    __log(
 	      div,
-	      context.options.comment.tag,
+	      this.context.options.comment.tag,
 	      message,
-	      context.options.comment.style
+	      this.context.options.comment.style
 	    );
 
 	    return self;
 	  },
 	  pass: function(message) {
 	    return this.print(
-	      context.options.passed.tag,
+	      this.context.options.passed.tag,
 	      message,
-	      context.options.passed.style
+	      this.context.options.passed.style
 	    );
 	  },
 	  fail: function(message) {
 	    return this.print(
-	      context.options.failed.tag,
+	      this.context.options.failed.tag,
 	      message,
-	      context.options.failed.style
+	      this.context.options.failed.style
 	    );
 	  },
 	  print: function(tag, message, style) {
@@ -372,41 +399,20 @@ module.exports =
 	methods.true =
 	methods.ok =
 	methods.is = function(value, message) {
-	  return __wrapper.call(
-	    this,
-	    context.methods.assert(value),
-	    value,
-	    true,
-	    null,
-	    message
-	  );
+	  return __wrapper(this, value, value, true, null, message);
 	};
 
 	methods.isNotOk =
 	methods.notOk =
 	methods.false = function(value, message) {
-	  return __wrapper.call(
-	    this, 
-	    context.methods.assert(!value), 
-	    value, 
-	    false, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, !value, value, false, null, message);
 	};
 
 	methods.isEquals =
 	methods.isEqual =
 	methods.equals =
 	methods.equal = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    context.methods.equal(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, (actual == expected), actual, expected, null, message);
 	};
 
 	methods.doesNotEquals =
@@ -415,28 +421,14 @@ module.exports =
 	methods.isNotEqual =
 	methods.notEquals =
 	methods.notEqual = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    !context.methods.equal(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, !(actual == expected), actual, expected, null, message);
 	};
 
 	methods.isEquivalent =
 	methods.deepEquals =
 	methods.deepEqual =
 	methods.same = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    context.methods.deepEqual(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, util.equal(actual, expected), actual, expected, null, message);
 	};
 
 	methods.isNotEquivalent =
@@ -446,42 +438,21 @@ module.exports =
 	methods.isNotDeepEqual =
 	methods.notDeepEqual =
 	methods.notSame = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    !context.methods.deepEqual(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, !util.equal(actual, expected), actual, expected, null, message);
 	};
 
 	methods.isStrictEquals =
 	methods.strictEquals =
 	methods.isStrictEqual =
 	methods.strictEqual = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    context.methods.strictEqual(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, (actual === expected), actual, expected, null, message);
 	};
 
 	methods.isNotStrictEquals =
 	methods.notStrictEquals =
 	methods.isNotStrictEqual =
 	methods.notStrictEqual = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    !context.methods.strictEqual(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, !(actual === expected), actual, expected, null, message);
 	};
 
 	methods.isDeepEquivalent =
@@ -490,14 +461,7 @@ module.exports =
 	methods.deepStrictEquals =
 	methods.isDeepStrictEqual =
 	methods.deepStrictEqual = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    context.methods.deepStrictEqual(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, util.strictEqual(actual, expected), actual, expected, null, message);
 	};
 
 	methods.isNotDeepEquivalent =
@@ -506,39 +470,37 @@ module.exports =
 	methods.notDeepStrictEquals =
 	methods.isNotDeepStrictEqual =
 	methods.notDeepStrictEqual = function(actual, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    !context.methods.deepStrictEqual(actual, expected), 
-	    actual, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, !util.strictEqual(actual, expected), actual, expected, null, message);
 	};
 
+	function __throws(fn, expected) {
+	  var isThrow = false;
+
+	  try {
+	    if (util.isFunction(fn)) {
+	      fn();
+	    }
+	  } catch (e) {
+	    if (util.isFunction(expected)) {
+	      isThrow = expected(e);
+	    } else if (util.isRegExp(expected)) {
+	      isThrow = expected.test(e.toString());
+	    }
+	  }
+
+	  return isThrow;
+	}
+
 	methods.throws = function(fn, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    context.methods.throws(fn, expected), 
-	    /Error/, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, __throws(fn, expected), /Error/, expected, null, message);
 	};
 
 	methods.doesNotThrow = function(fn, expected, message) {
-	  return __wrapper.call(
-	    this, 
-	    !context.methods.throws(fn, expected), 
-	    /Error/, 
-	    expected, 
-	    null, 
-	    message
-	  );
+	  return __wrapper(this, !__throws(fn, expected), /Error/, expected, null, message);
 	};
 
 	module.exports = methods;
+
 
 /***/ }
 /******/ ]);

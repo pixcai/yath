@@ -37,10 +37,6 @@
       textAlign: 'center'
     });
 
-    t.comment('test assert')
-      .assert(true)
-      .assert(false);
-
     t.comment('test equal')
       .equal(1, 1)
       .equal(1, 0)
@@ -62,38 +58,80 @@
         a: 1
       }, obj);
 
-    t.comment('test deepStrictEqual')
-      .deepStrictEqual(['a', 1], arr)
-      .deepStrictEqual(arr, arr)
-      .deepStrictEqual({
-        a: 1
-      }, obj)
-      .deepStrictEqual({
-        a: 1,
-        b: {
-          c: 'defg',
-          h: ['i', 'j', 'k', 'l'],
-          m: {
-            n: 1.1314
+    t.comment('test strictEqual')
+      .strictEqual(typeof t.assert, 'function')
+      .strictEqual(t.assert, t.true)
+      .strictEqual(t.assert, t.isOk)
+      .strictEqual(t.assert, t.ok)
+      .strictEqual(t.assert, t.is)
+
+    t.test('sub test', {
+      name: {
+        style: {
+          color: 'green'
+        }
+      },
+      comment: {
+        style: {
+          background: 'lightblue'
+        }
+      }
+    }, function(t) {
+      t.test('sub sub test', {
+        comment: {
+          style: {
+            background: 'purple'
+          }
+        },
+        actual: {
+          style: {
+            'font-size': '1.2em'
+          }
+        },
+        expected: {
+          style: {
+            'font-size': '1.2em'
           }
         }
-      }, obj);
+      }, function(t) {
+        t.comment('test deepStrictEqual')
+          .deepStrictEqual(['a', 1], arr)
+          .deepStrictEqual(arr, arr)
+          .deepStrictEqual({
+            a: 1
+          }, obj)
+          .deepStrictEqual({
+            a: 1,
+            b: {
+              c: 'defg',
+              h: ['i', 'j', 'k', 'l'],
+              m: {
+                n: 1.1314
+              }
+            }
+          }, obj);
+      });
 
-    t.comment('test throw')
-    	.throws(function () {
-    		throw new ReferenceError('throw something');
-    	}, /test/)
-    	.throws(function () {
-    		throw new ReferenceError('throw something');
-    	}, /something/);
+      t.comment('test throw')
+        .throws(function() {
+          throw new ReferenceError('throw something');
+        }, /test/)
+        .throws(function() {
+          throw new ReferenceError('throw something');
+        }, /something/);
 
-    t.comment('test doesNotThrow')
-    	.doesNotThrow(function () {
-    		throw new ReferenceError('throw something');
-    	}, /something/)
-    	.doesNotThrow(function () {
-    		throw new ReferenceError('throw something');
-    	}, /test/);
+      t.comment('test doesNotThrow')
+        .doesNotThrow(function() {
+          throw new ReferenceError('throw something');
+        }, /something/)
+        .doesNotThrow(function() {
+          throw new ReferenceError('throw something');
+        }, /test/);
+    });
+
+    t.comment('test assert')
+      .assert(true)
+      .assert(false);
   });
   </script>
 </body>
