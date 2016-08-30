@@ -1,5 +1,6 @@
 # yath
 Yet Another Tester for HTML
+![screenshot](screenshot.png)
 
 # Install
 ```shell
